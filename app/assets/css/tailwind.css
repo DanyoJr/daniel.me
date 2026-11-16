@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Extralight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Extrabold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monoglyphic';
+  src: url('/fonts/Monoglyphic%20Font/Monoglyphic%20Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Monoglyphic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: 'Monoglyphic', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Jet Black / Soft White / Flame Orange Palette */
+  --color-jet: #000000;
+  --color-jet-surface: #0A0A0A;
+  --color-soft-white: #FFFFFF;
+  --color-flame: #FE5101;
+}
+
+:root {
+  --bg-dot-color: #FE5101;
+}
+
+.dark {
+  --bg-dot-color: #FE5101;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: var(--font-sans);
+  }
+
+  body {
+    @apply antialiased bg-[#FFFFFF] text-[#000000] dark:bg-[#000000] dark:text-[#FFFFFF] selection:bg-[#FE5101]/25 selection:text-[#000000] dark:selection:bg-[#FE5101]/35 dark:selection:text-[#FFFFFF] overflow-x-hidden transition-colors duration-500;
+  }
+}
+
+/* Liquid Glass Optical Styles */
+.liquid-glass-surface {
+  position: relative;
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  transition: background-color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* Weather Card Animations (Uiverse neat-starfish-50 style) */
+@keyframes weather-cloud-float {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  50% {
+    transform: translateY(-4px) translateX(4px);
+  }
+}
+
+@keyframes weather-sun-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes weather-rain-drop {
+  0% {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+.animate-weather-cloud {
+  animation: weather-cloud-float 4s ease-in-out infinite;
+}
+
+.animate-weather-sun {
+  animation: weather-sun-pulse 3s ease-in-out infinite;
+}
+
+.animate-weather-rain {
+  animation: weather-rain-drop 1.4s linear infinite;
+}
+
+/* Marquee contínuo da direita para a esquerda (independente do scroll) */
+@keyframes stacks-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-stacks-marquee {
+  animation: stacks-marquee 26s linear infinite;
+}
