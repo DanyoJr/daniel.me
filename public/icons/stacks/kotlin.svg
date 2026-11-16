@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="kotlin-grad" x1="21" y1="3" x2="3" y2="21" gradientUnits="userSpaceOnUse">
+      <stop offset="0.003" stop-color="#E44857"/>
+      <stop offset="0.469" stop-color="#C711E1"/>
+      <stop offset="1" stop-color="#7F52FF"/>
+    </linearGradient>
+  </defs>
+  <polygon fill="url(#kotlin-grad)" points="21,21 3,21 3,3 21,3 12,12"/>
+</svg>

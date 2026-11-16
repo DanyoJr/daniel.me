@@ -1,9 +1,50 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { Motion } from 'motion-v'
-import { me } from '~/data/me'
-import LiquidGlass from '~/components/glass/LiquidGlass.vue'
+import { me, type ProjectItem } from '~/data/me'
+import type { GitHubReposResponse } from '~~/server/api/github-repos.get'
+import { Badge } from '~/components/ui/badge'
+import { Button } from '~/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardTitle
+} from '~/components/ui/card'
+import { Skeleton } from '~/components/ui/skeleton'
 
-const projects = me.projects
+const projects = ref<ProjectItem[]>(me.projects)
+const isLoadingProjects = ref(true)
+
+const EXTENSION_MAP: Record<string, string> = {
+  vue: 'vue',
+  typescript: 'ts',
+  javascript: 'js',
+  kotlin: 'kt',
+  java: 'java',
+  html: 'html',
+  css: 'css',
+  c: 'c'
+}
+
+function getFileExtension(project: ProjectItem): string {
+  const lang = (project.language || project.tags[0] || 'ts').toLowerCase()
+  return EXTENSION_MAP[lang] || 'ts'
+}
+
+onMounted(async () => {
+  try {
+    const data = await $fetch<GitHubReposResponse>('/api/github-repos')
+    if (data?.projects?.length) {
+      projects.value = data.projects
+    }
+  } catch {
+    // Mantém os projetos de fallback configurados em me.ts
+  } finally {
+    isLoadingProjects.value = false
+  }
+})
 </script>
 
 <template>
@@ -14,91 +55,188 @@ const projects = me.projects
   >
     <div class="mx-auto w-full max-w-6xl">
       <!-- Cabeçalho da Seção -->
-      <div class="mb-12 text-center md:text-left">
-        <span class="inline-block rounded-full bg-purple-500/20 px-3.5 py-1 text-xs font-bold uppercase tracking-widest text-purple-800 border border-purple-400/30 dark:text-purple-300">
-          Selected Works
-        </span>
-        <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
-          Projetos Principais
-        </h2>
-        <p class="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base dark:text-slate-300">
-          Os 3 principais projetos desenvolvidos com foco em performance, arquitetura limpa e experiência do usuário.
-        </p>
+      <div class="mb-12 flex flex-col items-center justify-between gap-4 text-center md:flex-row md:text-left">
+        <div>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-[#000000] sm:text-4xl dark:text-[#FFFFFF]">
+            Projetos
+          </h2>
+        </div>
+
+        <Button
+          as="a"
+          variant="ghost"
+          :href="me.contact.githubUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="h-auto rounded-full border border-black/15 bg-black/5 px-4 py-2 text-xs font-semibold text-[#000000] transition-colors hover:bg-black/5 hover:border-[#FE5101] hover:text-[#FE5101] dark:border-white/15 dark:bg-white/5 dark:text-[#FFFFFF] dark:hover:bg-white/5 dark:hover:border-[#FE5101] dark:hover:text-[#FE5101]"
+        >
+          <span>Ver todos no GitHub (@{{ me.githubUsername }})</span>
+          <span aria-hidden="true">↗</span>
+        </Button>
       </div>
 
-      <!-- Grid com os 3 Projetos Principais -->
-      <div class="grid grid-cols-1 gap-7 md:grid-cols-3">
+      <!-- Grid com os Projetos do GitHub -->
+      <div
+        v-if="isLoadingProjects"
+        class="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3"
+        aria-busy="true"
+      >
+        <Card
+          v-for="idx in 3"
+          :key="`project-skeleton-${idx}`"
+          rounded="rounded-xl"
+          class-name="flex h-full flex-col justify-between p-6 sm:p-7"
+        >
+          <CardContent>
+            <!-- Header Visual do Card do Projeto (Skeleton) -->
+            <div class="relative mb-6 flex h-40 w-full flex-col justify-between overflow-hidden rounded-lg border border-black/15 bg-black/[0.03] p-4 dark:border-white/15 dark:bg-white/[0.03]">
+              <div class="flex items-center justify-between">
+                <Skeleton class="h-6 w-20 rounded-full" />
+                <Skeleton class="h-4 w-8" />
+              </div>
+
+              <div class="rounded-md border border-black/10 bg-[#FFFFFF]/80 p-3 dark:border-white/10 dark:bg-[#000000]/80">
+                <div class="mb-2 flex items-center gap-1.5">
+                  <Skeleton class="h-2 w-2 rounded-full" />
+                  <Skeleton class="h-2 w-2 rounded-full" />
+                  <Skeleton class="h-2 w-2 rounded-full" />
+                  <Skeleton class="ml-2 h-2.5 w-28" />
+                </div>
+                <div class="space-y-1.5">
+                  <Skeleton class="h-1.5 w-3/4 rounded-full" />
+                  <Skeleton class="h-1.5 w-1/2 rounded-full" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Título e Descrição (Skeleton) -->
+            <Skeleton class="h-3.5 w-24" />
+            <Skeleton class="mt-2 h-6 w-3/4" />
+            <div class="mt-3.5 space-y-2">
+              <Skeleton class="h-3.5 w-full" />
+              <Skeleton class="h-3.5 w-5/6" />
+              <Skeleton class="h-3.5 w-2/3" />
+            </div>
+          </CardContent>
+
+          <!-- Rodapé do Card: Tags + Links (Skeleton) -->
+          <CardFooter>
+            <div class="flex flex-wrap gap-2">
+              <Skeleton class="h-6 w-16 rounded-md" />
+              <Skeleton class="h-6 w-20 rounded-md" />
+              <Skeleton class="h-6 w-14 rounded-md" />
+            </div>
+
+            <div class="mt-4 flex items-center gap-3 pt-1">
+              <Skeleton class="h-4 w-16" />
+              <Skeleton class="h-6 w-24 rounded-full" />
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
+
+      <div v-else class="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
         <Motion
           v-for="(project, index) in projects"
           :key="project.id"
           :initial="{ opacity: 0, y: 28 }"
-          :while-in-view="{ opacity: 1, y: 0 }"
+          :while-in-view="{ opacity: 1, y: 0, transition: { duration: 0.55, delay: index * 0.1 } }"
           :viewport="{ once: true, amount: 0.2 }"
-          :transition="{ duration: 0.55, delay: index * 0.12 }"
-          :while-hover="{ y: -6 }"
+          :transition="{ duration: 0.18, ease: 'easeOut' }"
+          :while-hover="{ y: -6, transition: { duration: 0.18, ease: 'easeOut', out: true } }"
         >
-          <LiquidGlass
+          <Card
             :interactive="true"
-            rounded="rounded-3xl"
+            rounded="rounded-xl"
             class-name="flex h-full flex-col justify-between p-6 sm:p-7"
           >
-            <div>
+            <CardContent>
               <!-- Header Visual do Card do Projeto -->
               <div
-                class="relative mb-6 flex h-40 w-full flex-col justify-between overflow-hidden rounded-2xl border border-white/30 bg-gradient-to-br p-4 dark:border-white/15"
+                class="relative mb-6 flex h-40 w-full flex-col justify-between overflow-hidden rounded-lg border border-black/15 bg-gradient-to-br p-4 dark:border-white/15"
                 :class="project.gradient"
               >
                 <div class="flex items-center justify-between">
-                  <span class="rounded-full bg-slate-950/60 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md">
+                  <Badge variant="dark" class="px-3 py-1 text-[11px]">
                     {{ project.highlight }}
-                  </span>
-                  <span class="text-xs font-bold text-slate-800/80 dark:text-white/80">
+                  </Badge>
+                  <span class="text-xs font-bold text-[#FE5101]">
                     #0{{ index + 1 }}
                   </span>
                 </div>
 
                 <!-- Mockup minimalista de código/janela -->
-                <div class="rounded-xl border border-white/30 bg-white/50 p-3 backdrop-blur-md dark:border-white/10 dark:bg-slate-950/60">
+                <div class="rounded-md border border-black/15 bg-[#FFFFFF]/80 p-3 backdrop-blur-md dark:border-white/15 dark:bg-[#000000]/80">
                   <div class="mb-2 flex items-center gap-1.5">
-                    <span class="h-2 w-2 rounded-full bg-rose-400" />
-                    <span class="h-2 w-2 rounded-full bg-amber-400" />
-                    <span class="h-2 w-2 rounded-full bg-emerald-400" />
-                    <span class="ml-2 truncate text-[10px] font-mono text-slate-600 dark:text-slate-400">
-                      {{ project.title.toLowerCase().replace(/\s+/g, '-') }}.ts
+                    <span class="h-2 w-2 rounded-full bg-[#FE5101]" />
+                    <span class="h-2 w-2 rounded-full bg-[#000000] dark:bg-[#FFFFFF]" />
+                    <span class="h-2 w-2 rounded-full bg-black/30 dark:bg-white/30" />
+                    <span class="ml-2 truncate text-[10px] font-mono text-black/60 dark:text-white/60">
+                      {{ project.title.toLowerCase().replace(/\s+/g, '-') }}.{{ getFileExtension(project) }}
                     </span>
                   </div>
                   <div class="space-y-1.5">
-                    <div class="h-1.5 w-3/4 rounded-full bg-purple-500/60" />
-                    <div class="h-1.5 w-1/2 rounded-full bg-slate-400/50 dark:bg-slate-600" />
+                    <div class="h-1.5 w-3/4 rounded-full bg-[#FE5101]" />
+                    <div class="h-1.5 w-1/2 rounded-full bg-black/25 dark:bg-white/30" />
                   </div>
                 </div>
               </div>
 
               <!-- Título e Descrição -->
-              <span class="text-xs font-semibold text-purple-700 dark:text-purple-300">
+              <span class="text-xs font-semibold text-[#FE5101]">
                 {{ project.subtitle }}
               </span>
-              <h3 class="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+              <CardTitle class="mt-1 leading-snug">
                 {{ project.title }}
-              </h3>
-              <p class="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+              </CardTitle>
+              <CardDescription class="mt-3">
                 {{ project.description }}
-              </p>
-            </div>
+              </CardDescription>
+            </CardContent>
 
-            <!-- Tags de Tecnologias -->
-            <div class="mt-6 border-t border-slate-300/40 pt-4 dark:border-white/10">
+            <!-- Rodapé do Card: Tags + Links (GitHub / Deploy) -->
+            <CardFooter>
               <div class="flex flex-wrap gap-2">
-                <span
+                <Badge
                   v-for="tag in project.tags"
                   :key="tag"
-                  class="rounded-xl bg-white/45 px-2.5 py-1 text-xs font-semibold text-slate-800 border border-white/40 dark:bg-white/10 dark:text-slate-200 dark:border-white/10"
+                  variant="default"
+                  class="rounded-md px-2.5 py-1"
                 >
                   {{ tag }}
-                </span>
+                </Badge>
               </div>
-            </div>
-          </LiquidGlass>
+
+              <div
+                v-if="project.repoUrl || project.liveUrl"
+                class="mt-4 flex items-center gap-3 pt-1"
+              >
+                <a
+                  v-if="project.repoUrl"
+                  :href="project.repoUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#000000] transition-colors hover:text-[#FE5101] dark:text-[#FFFFFF] dark:hover:text-[#FE5101]"
+                >
+                  <span>GitHub</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+
+                <Badge
+                  v-if="project.liveUrl"
+                  as="a"
+                  :href="project.liveUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="purple"
+                  class="gap-1.5 border-transparent bg-[#FE5101] px-3 py-1 text-xs font-semibold text-[#FFFFFF] transition-opacity hover:opacity-90"
+                >
+                  <span>Live Demo</span>
+                  <span aria-hidden="true">↗</span>
+                </Badge>
+              </div>
+            </CardFooter>
+          </Card>
         </Motion>
       </div>
     </div>

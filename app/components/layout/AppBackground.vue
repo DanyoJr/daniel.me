@@ -1,9 +1,243 @@
 <script setup lang="ts">
-// Background inspirado na arte em ondas da imagem de referência, adaptável ao Light e Dark mode
+import { ref, onMounted, onUnmounted } from 'vue'
+
+interface Props {
+  dotColor?: string
+  dotSize?: number
+  dotSpacing?: number
+  orbitSpeed?: number
+  impactRadius?: number
+  scaleOnHover?: number
+  enableRevolve?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  dotColor: 'var(--bg-dot-color, #FE5101)',
+  dotSize: 3,
+  dotSpacing: 28,
+  orbitSpeed: 1.5,
+  impactRadius: 100,
+  scaleOnHover: 1.8,
+  enableRevolve: true
+})
+
+interface DotItem {
+  bx: number
+  by: number
+  inclination: number
+  ascension: number
+  phase: number
+  speedMult: number
+}
+
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+
+function smoothstep(t: number): number {
+  const c = Math.max(0, Math.min(1, t))
+  return c * c * (3 - 2 * c)
+}
+
+function resolveVar(raw: string, el: HTMLElement): string {
+  const s = raw.trim()
+  if (!s.startsWith('var(')) return s
+  const inner = s.slice(4, -1).trim()
+  const commaIdx = inner.indexOf(',')
+  const varName = (commaIdx !== -1 ? inner.slice(0, commaIdx) : inner).trim()
+  const fallback = commaIdx !== -1 ? inner.slice(commaIdx + 1).trim() : ''
+  try {
+    const resolved = getComputedStyle(el).getPropertyValue(varName).trim()
+    if (resolved) return resolved
+  } catch {
+    // ignore
+  }
+  if (fallback) return resolveVar(fallback, el)
+  return '#888888'
+}
+
+function parseColor(raw: string, el: HTMLElement): { r: number; g: number; b: number } {
+  const color = resolveVar(raw, el)
+  if (color.startsWith('rgb')) {
+    const m = color.match(/[\d.]+/g) || []
+    return {
+      r: Number(m[0]) || 0,
+      g: Number(m[1]) || 0,
+      b: Number(m[2]) || 0
+    }
+  }
+  let h = color.replace('#', '')
+  if (h.length === 3) {
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('')
+  }
+  const n = parseInt(h.slice(0, 6), 16)
+  if (Number.isNaN(n)) return { r: 136, g: 136, b: 136 }
+  return {
+    r: (n >> 16) & 255,
+    g: (n >> 8) & 255,
+    b: n & 255
+  }
+}
+
+let raf = 0
+let ro: ResizeObserver | null = null
+let removeListeners: (() => void) | null = null
+
+onMounted(() => {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const dpr = window.devicePixelRatio || 1
+  let W = 0
+  let H = 0
+  const mouse = { x: -9999, y: -9999 }
+  let hovering = false
+  let leaveTs = 0
+  let prevTs = 0
+  let globalAngle = 0
+  let dots: DotItem[] = []
+  let spacingSnap = props.dotSpacing
+
+  function buildDots() {
+    const sp = props.dotSpacing
+    spacingSnap = sp
+    dots = []
+    const cols = Math.ceil(W / sp) + 2
+    const rows = Math.ceil(H / sp) + 2
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        dots.push({
+          bx: c * sp,
+          by: r * sp,
+          inclination: Math.random() * Math.PI,
+          ascension: Math.random() * Math.PI * 2,
+          phase: Math.random() * Math.PI * 2,
+          speedMult: 0.7 + Math.random() * 0.6
+        })
+      }
+    }
+  }
+
+  function resize() {
+    if (!canvas || !ctx) return
+    const rect = canvas.getBoundingClientRect()
+    W = rect.width
+    H = rect.height
+    canvas.width = W * dpr
+    canvas.height = H * dpr
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    buildDots()
+  }
+
+  ro = new ResizeObserver(resize)
+  ro.observe(canvas)
+  resize()
+
+  const onMouseMove = (e: MouseEvent) => {
+    const rect = canvas.getBoundingClientRect()
+    mouse.x = e.clientX - rect.left
+    mouse.y = e.clientY - rect.top
+    hovering = true
+  }
+
+  const onMouseLeave = () => {
+    mouse.x = -9999
+    mouse.y = -9999
+    hovering = false
+    leaveTs = performance.now()
+  }
+
+  window.addEventListener('mousemove', onMouseMove, { passive: true })
+  document.addEventListener('mouseleave', onMouseLeave)
+
+  removeListeners = () => {
+    window.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseleave', onMouseLeave)
+  }
+
+  function loop(ts: number) {
+    raf = requestAnimationFrame(loop)
+    if (!canvas || !ctx) return
+
+    const dt = Math.min((ts - (prevTs || ts)) / 1000, 0.05)
+    prevTs = ts
+
+    if (spacingSnap !== props.dotSpacing) buildDots()
+    globalAngle += props.orbitSpeed * dt
+
+    ctx.clearRect(0, 0, W, H)
+    const rgb = parseColor(props.dotColor, canvas)
+    const mx = mouse.x
+    const my = mouse.y
+    const timeSinceLeave = hovering ? 0 : Math.max(0, ts - leaveTs) / 1000
+    const decay = hovering ? 1 : smoothstep(Math.max(0, 1 - timeSinceLeave * 1.5))
+
+    for (const d of dots) {
+      const dx = d.bx - mx
+      const dy = d.by - my
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const inRange = dist < props.impactRadius && dist > 0
+
+      let x = d.bx
+      let y = d.by
+      let scale = 1
+      let alpha = 0.3
+
+      if (inRange) {
+        const t = dist / props.impactRadius
+        const inf = smoothstep(1 - t) * decay
+
+        if (props.enableRevolve) {
+          const orbitR = (1 - t) * props.dotSpacing * 0.7 * inf
+          const theta = globalAngle * d.speedMult + d.phase
+
+          const cosA = Math.cos(d.ascension)
+          const sinA = Math.sin(d.ascension)
+          const cosI = Math.cos(d.inclination)
+          const sinI = Math.sin(d.inclination)
+
+          const lx = Math.cos(theta)
+          const ly = Math.sin(theta) * cosI
+          const lz = Math.sin(theta) * sinI
+
+          const ox = (lx * cosA - ly * sinA) * orbitR
+          const oy = (lx * sinA + ly * cosA) * orbitR
+
+          x = d.bx + ox
+          y = d.by + oy
+
+          const depthScale = 0.75 + 0.25 * ((lz + 1) * 0.5)
+          scale = (1 + (props.scaleOnHover - 1) * inf) * depthScale
+          alpha = (0.3 + 0.7 * inf) * depthScale
+        } else {
+          scale = 1 + (props.scaleOnHover - 1) * inf
+          alpha = 0.3 + 0.7 * inf
+        }
+      }
+
+      const r = (props.dotSize / 2) * scale
+      ctx.beginPath()
+      ctx.arc(x, y, r, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha})`
+      ctx.fill()
+    }
+  }
+
+  raf = requestAnimationFrame(loop)
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(raf)
+  ro?.disconnect()
+  removeListeners?.()
+})
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-slate-100 dark:bg-[#050818] transition-colors duration-700">
+  <div class="fixed inset-0 -z-10 overflow-hidden bg-[#FFFFFF] dark:bg-[#000000] transition-colors duration-500">
     <!-- Filtro SVG global para refração Liquid Glass -->
     <svg class="hidden" aria-hidden="true">
       <defs>
@@ -25,64 +259,10 @@
       </defs>
     </svg>
 
-    <!-- Ondas vetoriais inspiradas no print de referência -->
-    <svg
-      class="absolute inset-0 h-full w-full object-cover opacity-85 dark:opacity-95 transition-opacity duration-700"
-      viewBox="0 0 1440 900"
-      fill="none"
-      preserveAspectRatio="xMidYMid slice"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <linearGradient id="bgBase" x1="0" y1="0" x2="1440" y2="900" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" class="stop-color-[#e0e7ff] dark:stop-color-[#040924]" stop-color="#040924" />
-          <stop offset="50%" class="stop-color-[#c7d2fe] dark:stop-color-[#0a1647]" stop-color="#0a1647" />
-          <stop offset="100%" class="stop-color-[#ddd6fe] dark:stop-color-[#090d2a]" stop-color="#090d2a" />
-        </linearGradient>
-
-        <linearGradient id="waveCyan" x1="150" y1="0" x2="850" y2="900" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.65" />
-          <stop offset="50%" stop-color="#2563eb" stop-opacity="0.45" />
-          <stop offset="100%" stop-color="#4f46e5" stop-opacity="0.7" />
-        </linearGradient>
-
-        <linearGradient id="waveBlueRibbon" x1="950" y1="0" x2="450" y2="900" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.55" />
-          <stop offset="55%" stop-color="#6366f1" stop-opacity="0.45" />
-          <stop offset="100%" stop-color="#a855f7" stop-opacity="0.35" />
-        </linearGradient>
-
-        <linearGradient id="waveGoldCorner" x1="850" y1="550" x2="1440" y2="900" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#eab308" stop-opacity="0.75" />
-          <stop offset="100%" stop-color="#ca8a04" stop-opacity="0.45" />
-        </linearGradient>
-      </defs>
-
-      <!-- Camada base -->
-      <rect width="1440" height="900" fill="url(#bgBase)" class=" opacity-25 dark:opacity-100" />
-
-      <!-- Faixa diagonal turquesa/azul à esquerda -->
-      <path
-        d="M-120 -80 C 120 180, 260 520, 560 960 L 180 960 C -40 620, -140 310, -220 -80 Z"
-        fill="url(#waveCyan)"
-      />
-
-      <!-- Fita curva central translúcida (como no print) -->
-      <path
-        d="M1040 -60 C 900 280, 740 540, 460 960 L 660 960 C 900 580, 1080 280, 1240 -60 Z"
-        fill="url(#waveBlueRibbon)"
-      />
-
-      <!-- Curva dourada/amarela no canto inferior direito (igual à referência) -->
-      <path
-        d="M860 940 C 980 680, 1220 560, 1520 620 L 1520 960 Z"
-        fill="url(#waveGoldCorner)"
-      />
-    </svg>
-
-    <!-- Brilhos difusos (Mesh Glows) para enriquecer a refração do Liquid Glass -->
-    <div class="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-cyan-500/25 dark:bg-cyan-500/20 blur-[120px]" />
-    <div class="absolute top-1/3 left-1/2 -translate-x-1/2 h-[30rem] w-[36rem] rounded-full bg-indigo-500/20 dark:bg-blue-600/25 blur-[140px]" />
-    <div class="absolute -bottom-32 -right-16 h-[26rem] w-[28rem] rounded-full bg-amber-400/30 dark:bg-yellow-500/25 blur-[120px]" />
+    <!-- Componente Dot-Grid-BG portado fielmente do Framer (Dot-Grid-BG-GVxaLr.js) -->
+    <canvas
+      ref="canvasRef"
+      class="block h-full w-full"
+    />
   </div>
 </template>

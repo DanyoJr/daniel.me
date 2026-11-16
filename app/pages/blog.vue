@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Motion } from 'motion-v'
-import LiquidGlass from '~/components/glass/LiquidGlass.vue'
+import { Badge } from '~/components/ui/badge'
+import { Card } from '~/components/ui/card'
 
 const targetPhrases = [
   'EM DESENVOLVIMENTO',
@@ -70,44 +71,47 @@ onUnmounted(() => {
       :animate="{ opacity: 1, scale: 1, y: 0 }"
       :transition="{ duration: 0.6, ease: 'easeOut' }"
     >
-      <LiquidGlass
+      <Card
         :interactive="true"
         rounded="rounded-3xl"
         class-name="p-8 sm:p-14 text-center"
         @mouseenter=" runScramble(targetPhrases[currentPhraseIndex]!) "
       >
-        <div class="mx-auto mb-5 inline-flex items-center gap-2 rounded-full bg-purple-600/20 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-purple-800 border border-purple-400/35 dark:bg-purple-500/20 dark:text-purple-300">
-          <span class="h-2 w-2 animate-pulse rounded-full bg-purple-500" />
+        <Badge
+          variant="purple"
+          class="mx-auto mb-5 gap-2 px-4 py-1.5 text-xs font-bold uppercase tracking-widest"
+        >
+          <span class="h-2 w-2 animate-pulse rounded-full bg-[#FE5101]" />
           Blog Status
-        </div>
+        </Badge>
 
         <!-- Scramble Text Central -->
         <h1
-          class="font-mono text-2xl font-extrabold tracking-wider text-slate-900 sm:text-4xl md:text-5xl dark:text-white select-all"
+          class="font-mono text-2xl font-extrabold tracking-wider text-[#000000] sm:text-4xl md:text-5xl dark:text-[#FFFFFF] select-all"
         >
           {{ displayedText }}
         </h1>
 
-        <p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-700 sm:text-base dark:text-slate-300">
+        <p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-black/65 sm:text-base dark:text-white/65">
           {{ displayedSubtitle }}
         </p>
 
         <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Motion :while-hover="{ scale: 1.05 }" :while-tap="{ scale: 0.95 }">
             <NuxtLink to="/">
-              <LiquidGlass
+              <Card
                 as="span"
                 tint="purple"
                 :interactive="true"
                 rounded="rounded-full"
-                class-name="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white"
+                class-name="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-[#FFFFFF]"
               >
                 ← Voltar para Home
-              </LiquidGlass>
+              </Card>
             </NuxtLink>
           </Motion>
         </div>
-      </LiquidGlass>
+      </Card>
     </Motion>
   </section>
 </template>

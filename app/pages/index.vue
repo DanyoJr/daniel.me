@@ -10,7 +10,7 @@ import ContactSection from '~/components/sections/ContactSection.vue'
     <!-- 1. Home (Cards Spotify, GitHub, LinkedIn + Sobre mim com idade dinâmica) -->
     <HomeSection />
 
-    <!-- 2. Carrossel de Stacks Interativo com o Scroll (Direita → Esquerda com Blur) -->
+    <!-- Faixa contínua de linguagens passando automaticamente da direita para a esquerda -->
     <StacksCarousel />
 
     <!-- 3. Projetos Principais (3 Cards) -->

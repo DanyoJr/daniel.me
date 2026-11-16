@@ -1,31 +1,41 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Motion } from 'motion-v'
-import LiquidGlass from '~/components/glass/LiquidGlass.vue'
+import { Card } from '~/components/ui/card'
+import { Badge } from '~/components/ui/badge'
+import { Skeleton } from '~/components/ui/skeleton'
 import type { WeatherResponse } from '~~/server/api/weather.get'
 
-const weather = ref<WeatherResponse>({
-  city: 'São Paulo, SP',
-  country: 'Brasil',
-  temperature: 26,
-  conditionText: 'Ensolarado',
-  conditionType: 'sunny',
-  humidity: 54,
-  windKph: 12,
-  isFallbackLocation: true,
-  source: 'simulated-fallback'
-})
+const weather = ref<WeatherResponse | null>(null)
 
-const loading = ref(true)
+const loading = ref(false)
 const cardRef = ref<HTMLElement | null>(null)
+const isMobile = ref(false)
 
 // Efeito Magnetic Button (coordenadas de deslocamento magnético)
 const magX = ref(0)
 const magY = ref(0)
 const isHovered = ref(false)
 
+function checkMobile() {
+  isMobile.value =
+    window.innerWidth < 768 ||
+    window.matchMedia('(hover: none), (pointer: coarse)').matches
+
+  if (isMobile.value) {
+    isHovered.value = false
+    magX.value = 0
+    magY.value = 0
+  }
+}
+
+function handleMouseEnter() {
+  if (isMobile.value) return
+  isHovered.value = true
+}
+
 function handleMouseMove(e: MouseEvent) {
-  if (!cardRef.value) return
+  if (isMobile.value || !cardRef.value) return
   const rect = cardRef.value.getBoundingClientRect()
   const centerX = rect.left + rect.width / 2
   const centerY = rect.top + rect.height / 2
@@ -52,7 +62,7 @@ const formattedDate = computed(() => {
   }).format(new Date())
 })
 
-const isRainy = computed(() => weather.value.conditionType === 'rainy')
+const isRainy = computed(() => weather.value?.conditionType === 'rainy')
 
 async function fetchWeather(params: Record<string, string>) {
   try {
@@ -63,41 +73,23 @@ async function fetchWeather(params: Record<string, string>) {
       weather.value = data
     }
   } catch {
-    // Mantém estado de fallback de São Paulo
+    weather.value = null
   } finally {
     loading.value = false
   }
 }
 
-// Alterna entre Ensolarado e Chuvoso ao clicar quando em modo fallback para fácil visualização dos 2 estados
-function toggleWeatherPreview() {
-  if (weather.value.source === 'simulated-fallback') {
-    if (weather.value.conditionType === 'sunny') {
-      weather.value = {
-        ...weather.value,
-        conditionType: 'rainy',
-        conditionText: 'Chuvoso',
-        temperature: 18
-      }
-    } else {
-      weather.value = {
-        ...weather.value,
-        conditionType: 'sunny',
-        conditionText: 'Ensolarado',
-        temperature: 26
-      }
-    }
-  }
-}
-
 onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+
   if (!('geolocation' in navigator)) {
-    fetchWeather({ fallback: 'true', city: 'São Paulo, SP' })
     return
   }
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
+      loading.value = true
       const { latitude, longitude } = pos.coords
       let detectedCity = 'Sua Localização'
 
@@ -122,32 +114,37 @@ onMounted(() => {
       await fetchWeather({
         lat: String(latitude),
         lon: String(longitude),
-        fallback: 'false',
         city: detectedCity
       })
     },
     () => {
-      // Se o usuário negar permissão, exibe São Paulo
-      fetchWeather({ fallback: 'true', city: 'São Paulo, SP' })
+      // Se o usuário negar permissão, o componente não deve aparecer
+      loading.value = false
+      weather.value = null
     },
     { timeout: 6000, maximumAge: 300000 }
   )
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 
 <template>
   <div
+    v-if="loading || weather"
     ref="cardRef"
     class="relative select-none"
     @mousemove="handleMouseMove"
-    @mouseenter="isHovered = true"
+    @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
     <Motion
       :animate="{
-        x: magX,
-        y: magY,
-        scale: isHovered ? 1.04 : 1
+        x: isMobile ? 0 : magX,
+        y: isMobile ? 0 : magY,
+        scale: !isMobile && isHovered ? 1.04 : 1
       }"
       :transition="{
         type: 'spring',
@@ -156,30 +153,44 @@ onMounted(() => {
         mass: 0.6
       }"
     >
-      <LiquidGlass
-        as="button"
-        type="button"
-        :tint="isRainy ? 'rainy' : 'sunny'"
-        :interactive="true"
-        rounded="rounded-2xl"
-        class-name="group relative w-[210px] sm:w-[235px] px-3.5 py-2.5 text-left transition-colors duration-500"
-        title="Clique para alternar prévia Sol / Chuva"
-        @click="toggleWeatherPreview"
+      <Card
+        :tint="weather ? (isRainy ? 'rainy' : 'sunny') : 'default'"
+        rounded="rounded-xl"
+        class-name="group relative flex h-[52px] sm:h-[60px] md:h-auto w-[142px] sm:w-[225px] md:w-[235px] items-center px-2.5 sm:px-3.5 py-1 sm:py-1.5 md:py-2.5 text-left transition-colors duration-500"
       >
-        <!-- Glow de fundo condicional (Mais amarelo no sol / Mais cinza na chuva) -->
+        <!-- Skeleton durante carregamento dos requests de localização/clima -->
         <div
-          class="pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full blur-xl transition-colors duration-500"
-          :class="isRainy ? 'bg-slate-400/35 dark:bg-slate-500/30' : 'bg-amber-400/45 dark:bg-yellow-400/35'"
-        />
+          v-if="loading && !weather"
+          class="relative flex h-full w-full items-center justify-between gap-1.5 sm:gap-2"
+          aria-busy="true"
+        >
+          <div class="flex min-w-0 flex-1 flex-col justify-between gap-1">
+            <div class="flex items-center gap-1">
+              <Skeleton class="h-3 w-3 shrink-0 rounded-full" />
+              <Skeleton class="h-3 w-20 sm:w-28" />
+            </div>
+            <Skeleton class="hidden sm:block h-2.5 w-24" />
+            <div class="mt-0.5 flex items-baseline gap-1.5">
+              <Skeleton class="h-5 w-9 sm:h-6 sm:w-11" />
+              <Skeleton class="h-3.5 w-10 rounded-md" />
+            </div>
+          </div>
+
+          <div class="relative flex h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 shrink-0 items-center justify-center">
+            <Skeleton class="h-8 w-8 sm:h-10 sm:w-10 md:h-11 md:w-11 rounded-full" />
+          </div>
+        </div>
 
         <!-- Layout inspirado no Uiverse zanina-yassine/neat-starfish-50 -->
-        <div class="relative flex items-center justify-between gap-2">
+        <div
+          v-else-if="weather"
+          class="relative flex h-full w-full items-center justify-between gap-1.5 sm:gap-2"
+        >
           <!-- Coluna Esquerda: Local, Data e Temperatura -->
           <div class="flex flex-col justify-between min-w-0">
             <div class="flex items-center gap-1">
               <svg
-                class="h-3 w-3 shrink-0"
-                :class="isRainy ? 'text-slate-700 dark:text-slate-300' : 'text-amber-700 dark:text-amber-300'"
+                class="h-3 w-3 shrink-0 text-[#FE5101]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -189,42 +200,40 @@ onMounted(() => {
                 <circle cx="12" cy="10" r="3" />
               </svg>
               <span
-                class="truncate text-xs font-bold tracking-tight"
-                :class="isRainy ? 'text-slate-800 dark:text-slate-100' : 'text-amber-950 dark:text-amber-50'"
+                class="truncate text-[11px] sm:text-xs font-bold leading-tight tracking-tight text-[#000000] dark:text-[#FFFFFF]"
               >
                 {{ weather.city }}
               </span>
             </div>
 
             <span
-              class="text-[10px] capitalize opacity-75"
-              :class="isRainy ? 'text-slate-700 dark:text-slate-300' : 'text-amber-900 dark:text-amber-200'"
+              class="hidden sm:block truncate text-[10px] leading-tight capitalize text-black/60 dark:text-white/60"
             >
               {{ formattedDate }} • {{ weather.conditionText }}
             </span>
 
-            <div class="mt-1 flex items-baseline gap-1.5">
+            <div class="mt-0.5 flex items-baseline gap-1 sm:gap-1.5">
               <span
-                class="text-2xl font-extrabold leading-none tracking-tight"
-                :class="isRainy ? 'text-slate-900 dark:text-white' : 'text-amber-950 dark:text-white'"
+                class="text-lg sm:text-xl md:text-2xl font-extrabold leading-none tracking-tight text-[#000000] dark:text-[#FFFFFF]"
               >
                 {{ weather.temperature }}°
               </span>
-              <span
-                class="rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase"
+              <Badge
+                :variant="isRainy ? 'default' : 'purple'"
+                class="rounded-md border-transparent px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-semibold uppercase leading-none"
                 :class="
                   isRainy
-                    ? 'bg-slate-600/20 text-slate-800 dark:bg-slate-400/20 dark:text-slate-200'
-                    : 'bg-amber-500/25 text-amber-950 dark:bg-amber-400/20 dark:text-amber-200'
+                    ? 'bg-black/10 text-[#000000] dark:bg-white/15 dark:text-[#FFFFFF]'
+                    : 'bg-[#FE5101]/20 text-[#FE5101] dark:bg-[#FE5101]/25 dark:text-[#FE5101]'
                 "
               >
                 Celsius
-              </span>
+              </Badge>
             </div>
           </div>
 
           <!-- Coluna Direita: Ilustração animada estilo neat-starfish-50 -->
-          <div class="relative flex h-14 w-14 shrink-0 items-center justify-center">
+          <div class="relative flex h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 shrink-0 items-center justify-center">
             <!-- Estado Ensolarado -->
             <template v-if="!isRainy">
               <div class="animate-weather-sun relative flex items-center justify-center">
@@ -277,7 +286,7 @@ onMounted(() => {
             </template>
           </div>
         </div>
-      </LiquidGlass>
+      </Card>
     </Motion>
   </div>
 </template>

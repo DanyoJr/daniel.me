@@ -2,7 +2,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Motion } from 'motion-v'
-import LiquidGlass from '~/components/glass/LiquidGlass.vue'
+import { Button } from '~/components/ui/button'
+import { Card } from '~/components/ui/card'
+import { Separator } from '~/components/ui/separator'
 import { useDockSettings } from '~/composables/useDockSettings'
 
 const route = useRoute()
@@ -123,17 +125,17 @@ onUnmounted(() => {
     class="pointer-events-none fixed z-40 transition-opacity duration-300"
     :class="
       effectivePosition === 'left'
-        ? 'left-0 top-1/2 -translate-y-1/2 h-28 w-1.5 rounded-r-full bg-purple-400/50 blur-[1px]'
-        : 'top-0 left-1/2 -translate-x-1/2 w-28 h-1.5 rounded-b-full bg-purple-400/50 blur-[1px]'
+        ? 'left-0 top-1/2 -translate-y-1/2 h-28 w-1.5 rounded-r-full bg-[#FE5101]/80 blur-[1px]'
+        : 'top-0 left-1/2 -translate-x-1/2 w-28 h-1.5 rounded-b-full bg-[#FE5101]/80 blur-[1px]'
     "
   />
 
   <aside
-    class="fixed z-50"
+    class="relative z-50 shrink-0 md:fixed"
     :class="
       effectivePosition === 'left'
-        ? 'left-4 top-1/2 -translate-y-1/2 sm:left-6'
-        : 'top-3 left-1/2 -translate-x-1/2 md:top-6'
+        ? 'md:left-6 md:top-1/2 md:-translate-y-1/2'
+        : 'md:top-6 md:left-1/2 md:-translate-x-1/2'
     "
     aria-label="Dock de Navegação Principal"
     @mouseenter="isDockHovered = true"
@@ -151,13 +153,13 @@ onUnmounted(() => {
         damping: 24
       }"
     >
-      <LiquidGlass
+      <Card
         as="nav"
         rounded="rounded-3xl"
-        class-name="p-2"
+        class-name="flex h-[52px] sm:h-[60px] md:h-auto items-center overflow-visible px-1.5 py-1 sm:p-2"
       >
         <div
-          class="flex items-center gap-1.5 sm:gap-2"
+          class="flex h-full items-center gap-1 sm:gap-2"
           :class="effectivePosition === 'left' ? 'flex-col' : 'flex-row'"
         >
           <!-- Itens de Navegação: Home, Projects, Blog, Contact Me -->
@@ -167,14 +169,15 @@ onUnmounted(() => {
             :while-hover="{ scale: 1.12 }"
             :while-tap="{ scale: 0.94 }"
           >
-            <button
+            <Button
               type="button"
-              class="group relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300"
-              :class="
+              :variant="
                 (route.path === '/blog' ? item.id === 'blog' : activeSection === item.id)
-                  ? 'bg-purple-600/80 text-white shadow-[0_4px_18px_rgba(124,58,237,0.45)] border border-purple-300/40'
-                  : 'text-slate-700 hover:bg-white/40 dark:text-slate-200 dark:hover:bg-white/10'
+                  ? 'dockActive'
+                  : 'dock'
               "
+              size="dockIcon"
+              class="group relative"
               :aria-label="item.label"
               @click="handleNavClick(item)"
             >
@@ -241,7 +244,7 @@ onUnmounted(() => {
 
               <!-- Tooltip do item -->
               <span
-                class="pointer-events-none absolute whitespace-nowrap rounded-xl bg-slate-900/90 px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow-lg backdrop-blur-md transition-opacity duration-200 group-hover:opacity-100 dark:bg-slate-800/95"
+                class="pointer-events-none absolute whitespace-nowrap rounded-xl border border-white/15 bg-[#000000]/95 px-2.5 py-1 text-xs font-medium text-[#FFFFFF] opacity-0 shadow-lg backdrop-blur-md transition-opacity duration-200 group-hover:opacity-100"
                 :class="
                   effectivePosition === 'left'
                     ? 'left-14 top-1/2 -translate-y-1/2'
@@ -250,34 +253,37 @@ onUnmounted(() => {
               >
                 {{ item.label }}
               </span>
-            </button>
+            </Button>
           </Motion>
 
           <!-- Divisor -->
-          <div
-            class="bg-slate-400/30 dark:bg-white/15"
+          <Separator
+            :orientation="effectivePosition === 'left' ? 'horizontal' : 'vertical'"
+            class="bg-black/15 dark:bg-white/15"
             :class="effectivePosition === 'left' ? 'my-1 h-px w-7' : 'mx-1 h-7 w-px'"
           />
 
           <!-- Botão de Engrenagem (Configurações do Dock) com Dropdown -->
           <div ref="dropdownContainerRef" class="relative">
             <Motion
-              :while-hover="{ scale: 1.12, rotate: 35 }"
+              :while-hover="{ scale: 1.12 }"
               :while-tap="{ scale: 0.94 }"
             >
-              <button
+              <Button
                 type="button"
-                class="group relative flex h-11 w-11 items-center justify-center rounded-2xl transition-all duration-300"
+                variant="dock"
+                size="dockIcon"
+                class="group relative"
                 :class="
                   isDropdownOpen
-                    ? 'bg-white/60 text-purple-600 dark:bg-white/20 dark:text-purple-300'
-                    : 'text-slate-700 hover:bg-white/40 dark:text-slate-200 dark:hover:bg-white/10'
+                    ? 'bg-[#FE5101]/20 text-[#FE5101] hover:bg-[#FE5101]/20 dark:bg-[#FE5101]/25 dark:text-[#FE5101] dark:hover:bg-[#FE5101]/25'
+                    : ''
                 "
                 aria-label="Configurações do Dock"
                 @click="isDropdownOpen = !isDropdownOpen"
               >
                 <svg
-                  class="h-5 w-5"
+                  class="h-5 w-5 transition-transform duration-300 group-hover:rotate-45"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -293,7 +299,7 @@ onUnmounted(() => {
 
                 <span
                   v-if="!isDropdownOpen"
-                  class="pointer-events-none absolute whitespace-nowrap rounded-xl bg-slate-900/90 px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow-lg backdrop-blur-md transition-opacity duration-200 group-hover:opacity-100 dark:bg-slate-800/95"
+                  class="pointer-events-none absolute whitespace-nowrap rounded-xl border border-white/15 bg-[#000000]/95 px-2.5 py-1 text-xs font-medium text-[#FFFFFF] opacity-0 shadow-lg backdrop-blur-md transition-opacity duration-200 group-hover:opacity-100"
                   :class="
                     effectivePosition === 'left'
                       ? 'left-14 top-1/2 -translate-y-1/2'
@@ -302,7 +308,7 @@ onUnmounted(() => {
                 >
                   Configurações
                 </span>
-              </button>
+              </Button>
             </Motion>
 
             <!-- Dropdown Menu Liquid Glass -->
@@ -323,98 +329,115 @@ onUnmounted(() => {
                     : 'top-14 right-0'
                 "
               >
-                <LiquidGlass
+                <Card
                   rounded="rounded-2xl"
-                  class-name="p-3.5 text-slate-800 dark:text-slate-100"
+                  class-name="bg-[#FFFFFF]/95 p-3.5 text-[#000000] shadow-2xl dark:bg-[#0A0A0A]/95 dark:text-[#FFFFFF]"
                 >
-                  <div class="mb-2 flex items-center justify-between border-b border-slate-300/40 pb-2 dark:border-white/10">
-                    <span class="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                  <div class="mb-2 flex items-center justify-between border-b border-black/15 pb-2 dark:border-white/15">
+                    <span class="text-xs font-bold uppercase tracking-wider text-[#FE5101]">
                       Configurações do Dock
                     </span>
                   </div>
 
-                  <!-- Opção 1: Comportamento (Fixo vs Reativo) -->
-                  <div class="mb-3">
-                    <p class="mb-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                      Comportamento (PC)
+                  <!-- Aviso exclusivo para Mobile -->
+                  <div v-if="isMobile" class="py-1">
+                    <p class="text-xs font-medium leading-relaxed text-black/75 dark:text-white/75">
+                      As configurações de posição e comportamento do Dock funcionam apenas no <span class="font-semibold text-[#FE5101]">PC</span>.
                     </p>
-                    <div class="grid grid-cols-2 gap-1.5">
-                      <button
-                        type="button"
-                        class="rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all"
-                        :class="
-                          behavior === 'fixed'
-                            ? 'bg-purple-600 text-white shadow-sm'
-                            : 'bg-white/40 text-slate-700 hover:bg-white/60 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/15'
-                        "
-                        @click="setBehavior('fixed')"
-                      >
-                        Fixo
-                      </button>
-                      <button
-                        type="button"
-                        class="rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all"
-                        :class="
+                    <p class="mt-1.5 text-[11px] leading-snug text-black/55 dark:text-white/55">
+                      No celular, o Dock permanece fixo no topo para melhor ergonomia.
+                    </p>
+                  </div>
+
+                  <!-- Controles exclusivos para PC -->
+                  <template v-else>
+                    <!-- Opção 1: Comportamento (Fixo vs Reativo) -->
+                    <div class="mb-3">
+                      <p class="mb-1.5 text-[11px] font-medium text-black/60 dark:text-white/60">
+                        Comportamento
+                      </p>
+                      <div class="grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-auto rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                          :class="
+                            behavior === 'fixed'
+                              ? 'bg-[#FE5101] text-[#FFFFFF] shadow-sm hover:bg-[#FE5101] dark:hover:bg-[#FE5101]'
+                              : 'bg-black/5 text-[#000000] hover:bg-black/10 dark:bg-white/5 dark:text-[#FFFFFF]/80 dark:hover:bg-white/15'
+                          "
+                          @click="setBehavior('fixed')"
+                        >
+                          Fixo
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-auto rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                          :class="
+                            behavior === 'reactive'
+                              ? 'bg-[#FE5101] text-[#FFFFFF] shadow-sm hover:bg-[#FE5101] dark:hover:bg-[#FE5101]'
+                              : 'bg-black/5 text-[#000000] hover:bg-black/10 dark:bg-white/5 dark:text-[#FFFFFF]/80 dark:hover:bg-white/15'
+                          "
+                          @click="setBehavior('reactive')"
+                        >
+                          Reativo
+                        </Button>
+                      </div>
+                      <p class="mt-1 text-[10px] leading-tight text-black/55 dark:text-white/55">
+                        {{
                           behavior === 'reactive'
-                            ? 'bg-purple-600 text-white shadow-sm'
-                            : 'bg-white/40 text-slate-700 hover:bg-white/60 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/15'
-                        "
-                        @click="setBehavior('reactive')"
-                      >
-                        Reativo
-                      </button>
+                            ? 'Aparece quando o cursor se aproxima da borda.'
+                            : 'Permanece visível acompanhando a página.'
+                        }}
+                      </p>
                     </div>
-                    <p class="mt-1 text-[10px] leading-tight text-slate-500 dark:text-slate-400">
-                      {{
-                        behavior === 'reactive'
-                          ? 'Aparece quando o cursor se aproxima da borda.'
-                          : 'Permanece visível acompanhando a página.'
-                      }}
-                    </p>
-                  </div>
 
-                  <!-- Opção 2: Posição no PC (Lateral Esquerda vs Topo) -->
-                  <div class="hidden md:block">
-                    <p class="mb-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                      Posição na Tela (PC)
-                    </p>
-                    <div class="grid grid-cols-2 gap-1.5">
-                      <button
-                        type="button"
-                        class="flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all"
-                        :class="
-                          position === 'left'
-                            ? 'bg-purple-600 text-white shadow-sm'
-                            : 'bg-white/40 text-slate-700 hover:bg-white/60 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/15'
-                        "
-                        @click="setPosition('left')"
-                      >
-                        Esquerda
-                      </button>
-                      <button
-                        type="button"
-                        class="flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all"
-                        :class="
-                          position === 'top'
-                            ? 'bg-purple-600 text-white shadow-sm'
-                            : 'bg-white/40 text-slate-700 hover:bg-white/60 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/15'
-                        "
-                        @click="setPosition('top')"
-                      >
-                        Em Cima
-                      </button>
+                    <!-- Opção 2: Posição no PC (Lateral Esquerda vs Topo) -->
+                    <div>
+                      <p class="mb-1.5 text-[11px] font-medium text-black/60 dark:text-white/60">
+                        Posição na Tela
+                      </p>
+                      <div class="grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-auto rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                          :class="
+                            position === 'left'
+                              ? 'bg-[#FE5101] text-[#FFFFFF] shadow-sm hover:bg-[#FE5101] dark:hover:bg-[#FE5101]'
+                              : 'bg-black/5 text-[#000000] hover:bg-black/10 dark:bg-white/5 dark:text-[#FFFFFF]/80 dark:hover:bg-white/15'
+                          "
+                          @click="setPosition('left')"
+                        >
+                          Esquerda
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-auto rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                          :class="
+                            position === 'top'
+                              ? 'bg-[#FE5101] text-[#FFFFFF] shadow-sm hover:bg-[#FE5101] dark:hover:bg-[#FE5101]'
+                              : 'bg-black/5 text-[#000000] hover:bg-black/10 dark:bg-white/5 dark:text-[#FFFFFF]/80 dark:hover:bg-white/15'
+                          "
+                          @click="setPosition('top')"
+                        >
+                          Em Cima
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-
-                  <p class="mt-1 text-[10px] text-slate-500 md:hidden dark:text-slate-400">
-                    No mobile o Dock fica padronizado no topo para melhor ergonomia.
-                  </p>
-                </LiquidGlass>
+                  </template>
+                </Card>
               </div>
             </Transition>
           </div>
         </div>
-      </LiquidGlass>
+      </Card>
     </Motion>
   </aside>
 </template>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AppBackground from '~/components/layout/AppBackground.vue'
-import AppDock from '~/components/layout/AppDock.vue'
 import TopRightControls from '~/components/layout/TopRightControls.vue'
 import { useTheme } from '~/composables/useTheme'
 
@@ -9,14 +8,11 @@ useTheme()
 </script>
 
 <template>
-  <div class="relative min-h-screen w-full text-slate-900 dark:text-slate-100">
+  <div class="relative min-h-screen w-full text-[#000000] dark:text-[#FFFFFF]">
     <!-- Fundo Mesh / Ondas adaptável ao tema -->
     <AppBackground />
 
-    <!-- Dock Fixo/Reativo com Engrenagem de Configurações -->
-    <AppDock />
-
-    <!-- Topo Direito: Card de Clima Magnético + Botão Dark Mode -->
+    <!-- Barra Superior (Mobile: Clima + Dock + Tema alinhados | Desktop: Dock lateral/topo + Clima/Tema à direita) -->
     <TopRightControls />
 
     <!-- Conteúdo das Páginas -->
